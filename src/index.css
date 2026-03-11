@@ -1,0 +1,28 @@
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+body {
+  @apply bg-zinc-50 text-zinc-900 font-sans;
+}
+
+.job-card {
+  @apply bg-white border border-zinc-200 rounded-xl p-5 transition-all hover:shadow-md hover:border-zinc-300;
+}
+
+.badge {
+  @apply px-2 py-1 rounded-md text-xs font-medium;
+}
+
+.badge-remote {
+  @apply bg-emerald-100 text-emerald-700;
+}
+
+.badge-role {
+  @apply bg-indigo-100 text-indigo-700;
+}
+
