@@ -87,7 +87,7 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-  const [selectedKeyword, setSelectedKeyword] = useState<string>("");
+  const [selectedKeyword, setSelectedKeyword] = useState<string>(keywords.length > 0 ? keywords[0] : "");
   const [offset, setOffset] = useState(0);
   const [hasMore, setHasMore] = useState(false);
   const [totalJobs, setTotalJobs] = useState(0);
@@ -105,9 +105,10 @@ export default function App() {
   };
 
   const handleRemoveKeyword = (kwToRemove: string) => {
-    setKeywords(keywords.filter(kw => kw !== kwToRemove));
+    const newKeywords = keywords.filter(kw => kw !== kwToRemove);
+    setKeywords(newKeywords);
     if (selectedKeyword === kwToRemove) {
-      setSelectedKeyword("");
+      setSelectedKeyword(newKeywords.length > 0 ? newKeywords[0] : "");
     }
   };
 
@@ -431,16 +432,6 @@ export default function App() {
           </AnimatePresence>
 
           <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => setSelectedKeyword("")}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-all border ${
-                selectedKeyword === "" 
-                ? "bg-indigo-600 border-indigo-600 text-white shadow-md" 
-                : "bg-white border-zinc-200 text-zinc-600 hover:border-zinc-300"
-              }`}
-            >
-              Todas as Vagas
-            </button>
             {keywords.map((keyword) => (
               <button
                 key={keyword}
