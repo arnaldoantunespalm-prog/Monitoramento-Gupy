@@ -13,14 +13,15 @@ async function startServer() {
   // Gupy API Proxy
   app.get("/api/jobs", async (req, res) => {
     try {
-      const { searchTerm, offset = 0 } = req.query;
+      const { searchTerm, offset = 0, workplaceType = "remote", state = "" } = req.query;
       
       const fetchWithHeaders = async (useComplexHeaders: boolean) => {
         const gupyUrl = new URL("https://employability-portal.gupy.io/api/v1/jobs");
         gupyUrl.searchParams.append("limit", "100");
         gupyUrl.searchParams.append("offset", String(offset));
         if (searchTerm) gupyUrl.searchParams.append("jobName", String(searchTerm));
-        gupyUrl.searchParams.append("workplaceType", "remote");
+        if (workplaceType) gupyUrl.searchParams.append("workplaceType", String(workplaceType));
+        if (state && state !== "Todos") gupyUrl.searchParams.append("state", String(state));
 
         const headers: Record<string, string> = useComplexHeaders ? {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',

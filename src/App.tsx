@@ -33,19 +33,43 @@ interface Job {
   careerPageUrl: string;
 }
 
-const DEFAULT_KEYWORDS = [
-  "Squad Leader", 
-  "Projetos", 
-  "Sistemas", 
-  "Gerente de Sistemas", 
-  "Scrum Master", 
-  "Agilidade", 
-  "Gerente de Projetos", 
-  "Coordenador de Projetos", 
-  "Coordenador de Sistemas", 
-  "PMO", 
-  "Delivery"
-];
+const DEFAULT_CATEGORIES: Record<string, string[]> = {
+  "Agilidade": [
+    "Squad Leader", 
+    "Projetos", 
+    "Sistemas", 
+    "Gerente de Sistemas", 
+    "Scrum Master", 
+    "Agilidade", 
+    "Gerente de Projetos", 
+    "Coordenador de Projetos", 
+    "Coordenador de Sistemas", 
+    "PMO", 
+    "Delivery"
+  ],
+  "Comercial": [
+    "Propagandista",
+    "Propagandista vendedor",
+    "Representante farmacêutico",
+    "Consultor farmacêutico",
+    "Consultor de demanda",
+    "Promotor técnico",
+    "Executivo de contas farma",
+    "Representante comercial farmacêutico",
+    "Vendas hospitalares",
+    "Visitação médica",
+    "Representante comercial",
+    "Consultor de vendas",
+    "Executivo de vendas",
+    "Vendedor externo",
+    "Vendedor interno",
+    "Key Account",
+    "Gerente de contas",
+    "Desenvolvimento de negócios",
+    "Gerente Comercial",
+    "Comercial"
+  ]
+};
 
 const playBeep = () => {
   try {
@@ -69,17 +93,41 @@ const playBeep = () => {
 };
 
 export default function App() {
-  const [keywords, setKeywords] = useState<string[]>(() => {
-    const saved = localStorage.getItem('gupy_keywords');
+  const [categories, setCategories] = useState<Record<string, string[]>>(() => {
+    const saved = localStorage.getItem('gupy_categories');
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        // Ensure new keywords from defaults are added to existing saved commercial category if it's missing them (to apply an update)
+        if (parsed["Comercial"]) {
+           const mergedComercial = Array.from(new Set([...parsed["Comercial"], ...DEFAULT_CATEGORIES["Comercial"]]));
+           parsed["Comercial"] = mergedComercial;
+        } else {
+           parsed["Comercial"] = DEFAULT_CATEGORIES["Comercial"];
+        }
+        return parsed;
       } catch (e) {
-        return DEFAULT_KEYWORDS;
+        return DEFAULT_CATEGORIES;
       }
     }
-    return DEFAULT_KEYWORDS;
+    const oldSaved = localStorage.getItem('gupy_keywords');
+    if (oldSaved) {
+      try {
+        const parsedOld = JSON.parse(oldSaved);
+        return {
+           ...DEFAULT_CATEGORIES,
+           "Agilidade": parsedOld
+        };
+      } catch (e) {
+        return DEFAULT_CATEGORIES;
+      }
+    }
+    return DEFAULT_CATEGORIES;
   });
+
+  const [activeCategory, setActiveCategory] = useState<string>("Agilidade");
+  const keywords = categories[activeCategory] || [];
+
   const [isEditingKeywords, setIsEditingKeywords] = useState(false);
   const [newKeyword, setNewKeyword] = useState("");
 
@@ -93,26 +141,41 @@ export default function App() {
   const [totalJobs, setTotalJobs] = useState(0);
 
   useEffect(() => {
-    localStorage.setItem('gupy_keywords', JSON.stringify(keywords));
-  }, [keywords]);
+    const currentKeywords = categories[activeCategory] || [];
+    if (!currentKeywords.includes(selectedKeyword)) {
+      setSelectedKeyword(currentKeywords.length > 0 ? currentKeywords[0] : "");
+    }
+  }, [activeCategory, categories, selectedKeyword]);
+
+  useEffect(() => {
+    localStorage.setItem('gupy_categories', JSON.stringify(categories));
+  }, [categories]);
+
+  const updateCategoryKeywords = (newKeywords: string[]) => {
+    setCategories(prev => ({
+      ...prev,
+      [activeCategory]: newKeywords
+    }));
+  };
 
   const handleAddKeyword = (e: React.FormEvent) => {
     e.preventDefault();
     if (newKeyword.trim() && !keywords.includes(newKeyword.trim())) {
-      setKeywords([...keywords, newKeyword.trim()]);
+      updateCategoryKeywords([...keywords, newKeyword.trim()]);
       setNewKeyword("");
     }
   };
 
   const handleRemoveKeyword = (kwToRemove: string) => {
     const newKeywords = keywords.filter(kw => kw !== kwToRemove);
-    setKeywords(newKeywords);
+    updateCategoryKeywords(newKeywords);
     if (selectedKeyword === kwToRemove) {
       setSelectedKeyword(newKeywords.length > 0 ? newKeywords[0] : "");
     }
   };
 
   // Live Monitor State
+  const [workplaceType, setWorkplaceType] = useState<string>("remote");
   const [soundAlerts, setSoundAlerts] = useState(false);
   const [newAlerts, setNewAlerts] = useState<Job[]>([]);
   const seenJobIdsRef = useRef<Set<number>>(new Set());
@@ -122,10 +185,19 @@ export default function App() {
     jobs.forEach(j => seenJobIdsRef.current.add(j.id));
   }, [jobs]);
 
+  const [selectedState, setSelectedState] = useState<string>("Todos");
+
+  const brazilianStates = [
+    "São Paulo", "Acre", "Alagoas", "Amapá", "Amazonas", "Bahia", "Ceará", "Distrito Federal",
+    "Espírito Santo", "Goiás", "Maranhão", "Mato Grosso", "Mato Grosso do Sul", "Minas Gerais", 
+    "Pará", "Paraíba", "Paraná", "Pernambuco", "Piauí", "Rio de Janeiro", "Rio Grande do Norte", 
+    "Rio Grande do Sul", "Rondônia", "Roraima", "Santa Catarina", "Sergipe", "Tocantins"
+  ];
+
   const fetchLiveJobs = useCallback(async (isInitial: boolean = false) => {
     try {
       // Fetch the 100 most recent remote jobs overall
-      const response = await fetch(`/api/jobs?limit=100&offset=0`);
+      const response = await fetch(`/api/jobs?limit=100&offset=0&workplaceType=${workplaceType}&state=${encodeURIComponent(selectedState)}`);
       if (!response.ok) return;
       const data = await response.json();
       const fetchedJobs: Job[] = data.data || [];
@@ -164,7 +236,7 @@ export default function App() {
             playBeep();
             if (Notification.permission === "granted") {
               const notification = new Notification(`Nova Vaga: ${job.name}`, {
-                body: `${job.companyName} publicou uma nova vaga remota.`,
+                body: `${job.companyName} publicou uma nova vaga ${workplaceType === 'remote' ? 'remota' : workplaceType === 'hybrid' ? 'híbrida' : 'presencial'}.`,
               });
               notification.onclick = () => {
                 window.open(job.jobUrl, '_blank');
@@ -189,7 +261,7 @@ export default function App() {
     } catch (err) {
       console.error("Live monitor error:", err);
     }
-  }, [selectedKeyword, soundAlerts, keywords]);
+  }, [selectedKeyword, soundAlerts, keywords, workplaceType, selectedState]);
 
   // Initial population of seen IDs
   useEffect(() => {
@@ -219,7 +291,7 @@ export default function App() {
     setLoading(true);
     if (!append) setError(null);
     try {
-      const response = await fetch(`/api/jobs?searchTerm=${encodeURIComponent(keyword)}&offset=${currentOffset}`);
+      const response = await fetch(`/api/jobs?searchTerm=${encodeURIComponent(keyword)}&offset=${currentOffset}&workplaceType=${workplaceType}&state=${encodeURIComponent(selectedState)}`);
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -248,12 +320,13 @@ export default function App() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [workplaceType, selectedState]);
 
   useEffect(() => {
     setOffset(0);
+    // Clear list briefly or just fetch fresh
     fetchJobs(selectedKeyword, 0, false);
-  }, [selectedKeyword, fetchJobs]);
+  }, [selectedKeyword, workplaceType, selectedState, fetchJobs]);
 
   const handleLoadMore = () => {
     const nextOffset = offset + 100;
@@ -282,8 +355,10 @@ export default function App() {
               <Briefcase className="text-white w-6 h-6" />
             </div>
             <div>
-              <h1 className="text-xl font-bold tracking-tight">Gupy Remote Tracker</h1>
-              <p className="text-xs text-zinc-500 font-medium uppercase tracking-wider">Vagas 100% Remotas</p>
+              <h1 className="text-xl font-bold tracking-tight">Gupy Job Tracker</h1>
+              <p className="text-xs text-zinc-500 font-medium uppercase tracking-wider">
+                {workplaceType === 'remote' ? 'Vagas 100% Remotas' : workplaceType === 'hybrid' ? 'Vagas Híbridas' : 'Vagas Presenciais'}
+              </p>
             </div>
           </div>
 
@@ -364,7 +439,30 @@ export default function App() {
 
         {/* Filters */}
         <section className="mb-8">
-          <div className="flex items-center justify-between mb-4">
+          {/* Categories */}
+          <div className="flex gap-4 mb-6 border-b border-zinc-200">
+            {Object.keys(categories).map(category => (
+              <button
+                key={category}
+                onClick={() => setActiveCategory(category)}
+                className={`pb-3 text-sm font-semibold transition-colors relative ${
+                  activeCategory === category 
+                    ? "text-indigo-600" 
+                    : "text-zinc-500 hover:text-zinc-700"
+                }`}
+              >
+                {category}
+                {activeCategory === category && (
+                  <motion.div 
+                    layoutId="activeCategoryIndicator"
+                    className="absolute left-0 right-0 bottom-0 h-0.5 bg-indigo-600 rounded-t-full"
+                  />
+                )}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
             <div className="flex items-center gap-2">
               <Filter className="w-4 h-4 text-zinc-400" />
               <h2 className="text-sm font-semibold text-zinc-500 uppercase tracking-wider">Filtrar por Cargo</h2>
@@ -374,15 +472,41 @@ export default function App() {
                 </span>
               )}
             </div>
-            <button 
-              onClick={() => setIsEditingKeywords(!isEditingKeywords)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                isEditingKeywords ? 'bg-indigo-100 text-indigo-700' : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
-              }`}
-            >
-              <Settings2 className="w-3.5 h-3.5" />
-              {isEditingKeywords ? 'Concluir Edição' : 'Editar Filtros'}
-            </button>
+
+            <div className="flex flex-wrap items-center gap-3">
+              <select
+                value={workplaceType}
+                onChange={(e) => setWorkplaceType(e.target.value)}
+                className="px-3 py-1.5 text-sm font-medium bg-zinc-100 border-none rounded-lg text-zinc-700 cursor-pointer outline-none focus:ring-2 focus:ring-indigo-500 hover:bg-zinc-200 transition-colors"
+                title="Selecione o modelo de trabalho"
+              >
+                <option value="remote">🌐 Remotas</option>
+                <option value="hybrid">🤝 Híbridas</option>
+                <option value="on-site">🏢 Presenciais</option>
+              </select>
+
+              <select
+                value={selectedState}
+                onChange={(e) => setSelectedState(e.target.value)}
+                className="px-3 py-1.5 text-sm font-medium bg-zinc-100 border-none rounded-lg text-zinc-700 cursor-pointer outline-none focus:ring-2 focus:ring-indigo-500 hover:bg-zinc-200 transition-colors"
+                title="Selecione o estado"
+              >
+                <option value="Todos">📍 Todos os Estados</option>
+                {brazilianStates.map((uf) => (
+                  <option key={uf} value={uf}>{uf === "São Paulo" ? `⭐ ${uf}` : uf}</option>
+                ))}
+              </select>
+
+              <button 
+                onClick={() => setIsEditingKeywords(!isEditingKeywords)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  isEditingKeywords ? 'bg-indigo-100 text-indigo-700' : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
+                }`}
+              >
+                <Settings2 className="w-4 h-4" />
+                <span className="hidden sm:inline">{isEditingKeywords ? 'Concluir' : 'Editar Filtros'}</span>
+              </button>
+            </div>
           </div>
 
           <AnimatePresence>
@@ -480,7 +604,9 @@ export default function App() {
                   <div>
                     <div className="flex justify-between items-start mb-3">
                       <div className="flex items-center gap-2">
-                        <span className="badge badge-remote">Remoto</span>
+                        <span className={`badge ${workplaceType === 'remote' ? 'badge-remote' : workplaceType === 'hybrid' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>
+                          {workplaceType === 'remote' ? 'Remoto' : workplaceType === 'hybrid' ? 'Híbrido' : 'Presencial'}
+                        </span>
                         {job.type && <span className="badge bg-zinc-100 text-zinc-600">{job.type}</span>}
                       </div>
                       <span className="text-[10px] text-zinc-400 font-mono">
