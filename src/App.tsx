@@ -15,7 +15,8 @@ import {
   X,
   Plus,
   Settings2,
-  Trash2
+  Trash2,
+  Eye
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -139,6 +140,27 @@ export default function App() {
   const [offset, setOffset] = useState(0);
   const [hasMore, setHasMore] = useState(false);
   const [totalJobs, setTotalJobs] = useState(0);
+
+  const [viewedJobs, setViewedJobs] = useState<number[]>(() => {
+    const saved = localStorage.getItem('gupy_viewed_jobs');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        return [];
+      }
+    }
+    return [];
+  });
+
+  const markJobAsViewed = (jobId: number) => {
+    setViewedJobs(prev => {
+      if (prev.includes(jobId)) return prev;
+      const updated = [...prev, jobId];
+      localStorage.setItem('gupy_viewed_jobs', JSON.stringify(updated));
+      return updated;
+    });
+  };
 
   useEffect(() => {
     const currentKeywords = categories[activeCategory] || [];
@@ -599,7 +621,7 @@ export default function App() {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.9 }}
                   transition={{ duration: 0.2, delay: index * 0.05 }}
-                  className="job-card flex flex-col justify-between"
+                  className={`job-card flex flex-col justify-between ${viewedJobs.includes(job.id) ? 'opacity-60 bg-zinc-50' : ''}`}
                 >
                   <div>
                     <div className="flex justify-between items-start mb-3">
@@ -608,6 +630,12 @@ export default function App() {
                           {workplaceType === 'remote' ? 'Remoto' : workplaceType === 'hybrid' ? 'Híbrido' : 'Presencial'}
                         </span>
                         {job.type && <span className="badge bg-zinc-100 text-zinc-600">{job.type}</span>}
+                        {viewedJobs.includes(job.id) && (
+                          <span className="badge bg-purple-100 text-purple-700 border-purple-200 flex items-center gap-1 font-medium">
+                            <Eye className="w-3 h-3" />
+                            Visto
+                          </span>
+                        )}
                       </div>
                       <span className="text-[10px] text-zinc-400 font-mono">
                         {formatDate(job.publishedDate)}
@@ -634,6 +662,7 @@ export default function App() {
                       href={job.jobUrl} 
                       target="_blank" 
                       rel="noopener noreferrer"
+                      onClick={() => markJobAsViewed(job.id)}
                       className="flex items-center gap-1 text-indigo-600 text-sm font-semibold hover:underline"
                     >
                       Ver Vaga
