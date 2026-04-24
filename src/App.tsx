@@ -704,12 +704,18 @@ export default function App() {
       </main>
 
       {/* Footer Info */}
-      <footer className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-md border-t border-zinc-200 py-3 px-4">
-        <div className="max-w-6xl mx-auto flex justify-between items-center">
+      <footer className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-md border-t border-zinc-200 py-3 px-4 z-20">
+        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-2">
           <p className="text-[10px] text-zinc-400 uppercase tracking-widest font-bold">
             Monitorando Portal Gupy
           </p>
-          <div className="flex gap-4">
+          <div className="flex items-center gap-4">
+            <div className={`flex items-center gap-1.5 transition-colors ${soundAlerts ? 'text-emerald-600' : 'text-zinc-400'}`}>
+              <div className={`w-2 h-2 rounded-full ${soundAlerts ? 'bg-emerald-500 animate-pulse' : 'bg-zinc-300'}`}></div>
+              <span className="text-[10px] font-bold uppercase tracking-tighter">
+                Notificações {soundAlerts ? 'ON' : 'OFF'}
+              </span>
+            </div>
             <div className="flex items-center gap-1.5">
               <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
               <span className="text-[10px] text-emerald-600 font-bold uppercase tracking-tighter">
