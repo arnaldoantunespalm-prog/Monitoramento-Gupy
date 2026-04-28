@@ -262,6 +262,7 @@ export default function App() {
               });
               notification.onclick = () => {
                 window.open(job.jobUrl, '_blank');
+                markJobAsViewed(job.id);
               };
             }
           });
@@ -447,6 +448,7 @@ export default function App() {
                       href={job.jobUrl} 
                       target="_blank" 
                       rel="noopener noreferrer"
+                      onClick={() => markJobAsViewed(job.id)}
                       className="mt-3 inline-flex items-center gap-1 text-emerald-600 text-xs font-bold hover:underline"
                     >
                       Candidatar-se agora
